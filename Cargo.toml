@@ -5,3 +5,4 @@ authors = ["mthh"]
 
 [dependencies]
 rand = "*"
+colored = "1.6"

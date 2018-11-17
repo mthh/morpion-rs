@@ -1,14 +1,23 @@
+
+extern crate colored;
 extern crate rand;
+use std::io;
+use std::io::Write;
+use colored::*;
+use rand::seq::sample_iter;
+
 
 macro_rules! check_state {
     ($jeu:expr) => {{
         match $jeu.check_state() {
             State::Win(p) => {
-                println!("{:?} wins !!\n{}", p, $jeu);
+                print!("{}[2J", 27 as char);
+                println!("    {:?} wins !!\n\n{}", p, $jeu);
                 break;
             },
             State::Tie => {
-                println!("Tie !!\n{}", $jeu);
+                print!("{}[2J", 27 as char);
+                println!("    Tie !!\n\n{}", $jeu);
                 break;
             },
             _ => (),
@@ -56,19 +65,27 @@ impl<'a> Into<char> for &'a Player {
     }
 }
 
+fn format_char_color(c: char) -> String {
+    match c {
+        'X' => format!(" {} ", c.to_string().blue()),
+        'O' => format!(" {} ", c.to_string().red()),
+        _ => unreachable!(),
+    }
+}
+
 impl std::fmt::Display for Jeu {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f, "{} | {} | {}\n---------------\n{} | {} | {}\n---------------\n{} | {} | {}\n",
-            if self.board[0] == '.' { "[1]".to_string() } else { format!(" {} ", self.board[0].to_string()) } ,
-            if self.board[1] == '.' { "[2]".to_string() } else { format!(" {} ", self.board[1].to_string()) },
-            if self.board[2] == '.' { "[3]".to_string() } else { format!(" {} ", self.board[2].to_string()) },
-            if self.board[3] == '.' { "[4]".to_string() } else { format!(" {} ", self.board[3].to_string()) },
-            if self.board[4] == '.' { "[5]".to_string() } else { format!(" {} ", self.board[4].to_string()) },
-            if self.board[5] == '.' { "[6]".to_string() } else { format!(" {} ", self.board[5].to_string()) },
-            if self.board[6] == '.' { "[7]".to_string() } else { format!(" {} ", self.board[6].to_string()) },
-            if self.board[7] == '.' { "[8]".to_string() } else { format!(" {} ", self.board[7].to_string()) },
-            if self.board[8] == '.' { "[9]".to_string() } else { format!(" {} ", self.board[8].to_string()) },
+            if self.board[0] == '.' { format!("{}", "[1]".yellow()) } else { format_char_color(self.board[0]) },
+            if self.board[1] == '.' { format!("{}", "[2]".yellow()) } else { format_char_color(self.board[1]) },
+            if self.board[2] == '.' { format!("{}", "[3]".yellow()) } else { format_char_color(self.board[2]) },
+            if self.board[3] == '.' { format!("{}", "[4]".yellow()) } else { format_char_color(self.board[3]) },
+            if self.board[4] == '.' { format!("{}", "[5]".yellow()) } else { format_char_color(self.board[4]) },
+            if self.board[5] == '.' { format!("{}", "[6]".yellow()) } else { format_char_color(self.board[5]) },
+            if self.board[6] == '.' { format!("{}", "[7]".yellow()) } else { format_char_color(self.board[6]) },
+            if self.board[7] == '.' { format!("{}", "[8]".yellow()) } else { format_char_color(self.board[7]) },
+            if self.board[8] == '.' { format!("{}", "[9]".yellow()) } else { format_char_color(self.board[8]) },
         )
     }
 }
@@ -136,6 +153,7 @@ fn min_max(board: &mut Jeu, player: &Player, ai_player: &Player) -> IndexScore {
         Player::X => Player::O,
         _ => Player::X,
     };
+    // unsafe { FC += 1; }
     if wins(board, &other_player) {
         IndexScore(None, -10)
     } else if wins(board, ai_player) {
@@ -214,11 +232,13 @@ fn read_command() -> Result<Command, String> {
     }
 }
 
+// static mut FC: i32 = 0;
+
 fn main() {
     let mut rng = rand::thread_rng();
     let mut jeu = Jeu::new();
-    let starting_player = rand::sample(&mut rng, vec!['X', 'O'], 1)[0];
-
+    let starting_player = sample_iter(&mut rng, vec!['X', 'O'], 1).unwrap()[0];
+    print!("{}[2J", 27 as char);
     println!("You are : O\nComputer is : X\nPlayer to start : {} \n", starting_player);
     println!("Instruction : Enter the index of the case to use (or q to quit)\n");
 
@@ -228,7 +248,8 @@ fn main() {
     }
 
     loop {
-        println!("\n{}\nO >", jeu);
+        print!("\n{}\nO > ", jeu);
+        io::stdout().flush().unwrap();
         match read_command() {
             Ok(Command::Val(index)) => if 1 <= index && index <= 9 {
                 if let Err(err) = jeu.make_move(&Player::O, index - 1) {
@@ -245,8 +266,10 @@ fn main() {
 
         let to_be_played = match min_max(&mut jeu, &Player::X, &Player::X).0 {
             Some(ix) => ix,
-            None => rand::sample(&mut rng, jeu.empty_indexes(), 1)[0],
+            None => sample_iter(&mut rng, jeu.empty_indexes(), 1).unwrap()[0]
         };
+        print!("{}[2J", 27 as char);
+        // unsafe { println!("FC : {}", FC); FC = 0; }
         jeu.make_move(&Player::X, to_be_played).unwrap();
         check_state!(&jeu);
     }
